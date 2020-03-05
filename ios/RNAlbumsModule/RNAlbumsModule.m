@@ -27,11 +27,14 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
   [RNAlbumsModule authorize:^(BOOL authorized) {
     if (authorized) {
       PHFetchResult<PHAssetCollection *> *collections =
-      [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeSmartAlbum
+      [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
                                                subtype:PHAssetCollectionSubtypeAny
                                                options:nil];
       __block NSMutableArray<NSDictionary *> *result = [[NSMutableArray alloc] init];
       [collections enumerateObjectsUsingBlock:^(PHAssetCollection * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (!obj.canContainAssets) {
+            return;
+        }
         //PHAssetCollectionSubtype type = [obj assetCollectionSubtype];
         //if (!isAlbumTypeSupported(type)) {
         //  return;
@@ -42,14 +45,14 @@ RCT_EXPORT_METHOD(getAlbumList:(NSDictionary *)options
         fetchOptions.sortDescriptors = @[ [NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:YES] ];
         PHFetchResult *fetchResult = [PHAsset fetchAssetsInAssetCollection:obj options: fetchOptions];
         PHAsset *coverAsset = fetchResult.lastObject;
-        NSString *burstIdentifier = @"";
-        if (coverAsset.burstIdentifier) {
-            burstIdentifier = coverAsset.burstIdentifier;
+        NSString *albumTitle = @"";
+        if (obj.localizedTitle) {
+            albumTitle = obj.localizedTitle;
         }
 
         if (coverAsset) {
             NSDictionary *album = @{@"count": @(fetchResult.count),
-                                    @"name": burstIdentifier,
+                                    @"name": albumTitle,
                                     // Photos Framework asset scheme ph://
                                     // https://github.com/facebook/react-native/blob/master/Libraries/CameraRoll/RCTPhotoLibraryImageLoader.m
                                     @"cover": [NSString stringWithFormat:@"ph://%@", coverAsset.localIdentifier] };
